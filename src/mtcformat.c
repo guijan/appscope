@@ -120,23 +120,23 @@ createStatsFieldString(mtc_fmt_t* fmt, event_field_t* f, char* tag, int sizeofta
 static void
 appendStatsdFieldString(mtc_fmt_t* fmt, char* tag, int sz, char** end, int* bytes, int* firstTagAdded)
 {
+    const char* sep;
+
     if (!*firstTagAdded) {
-        sz += 2; // add space for the |#
-        if ((*bytes + sz) >= fmt->statsd.max_len) return;
-        *end = stpcpy(*end, "|#");
-        *end = stpcpy(*end, tag);
-        strcpy(*end, "\n"); // add newline, but don't advance end
+        sep = "|#";
+        sz += 2; // sz += strlen(sep)
         *firstTagAdded = 1;
     } else {
-        sz += 1; // add space for the comma
-        if ((*bytes + sz) >= fmt->statsd.max_len) return;
-        *end = stpcpy(*end, ",");
-        *end = stpcpy(*end, tag);
-        strcpy(*end, "\n"); // add newline, but don't advance end
+        sep = ",";
+        sz += 1; // sz += strlen(sep)
     }
-    *bytes += sz;
-}
+    if ((*bytes + sz) >= fmt->statsd.max_len) return;
 
+    *bytes += sz;
+    *end = stpcpy(*end, sep);
+    *end = stpcpy(*end, tag);
+    strcpy(*end, "\n"); // Add newline, but don't advance end.
+}
 
 static void
 addStatsdFields(mtc_fmt_t* fmt, event_field_t* fields, char** end, int* bytes, int* firstTagAdded, regex_t* fieldFilter)
@@ -281,9 +281,9 @@ mtcFormatEventForOutput(mtc_fmt_t *fmt, event_t *evt, regex_t *fieldFilter)
         double timestamp = tb.time + (double)tb.millitm/1000;
         cJSON_AddNumberToObjLN(json, "_time", timestamp);
 
-        // add envelope for metric events 
+        // add envelope for metric events
         // https://github.com/criblio/appscope/issues/198
-        
+
         if (!(json_root = cJSON_CreateObject())) goto out;
         if (!cJSON_AddStringToObjLN(json_root, "type", "metric")) goto out;
         cJSON_AddItemToObjectCS(json_root, "body", json);
